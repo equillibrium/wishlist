@@ -34,7 +34,7 @@
   <header class="sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-800/70 bg-white/70 dark:bg-slate-900/60 glass">
     <div class="mx-auto container-max px-4 py-3 flex items-center gap-3">
       <div class="text-2xl">🎁</div>
-      <h1 class="text-xl font-semibold tracking-tight">Wishlist</h1>
+      <a href="/"><h1 class="text-xl font-semibold tracking-tight">Wishlist</h1></a>
       <div class="ml-auto flex flex-wrap gap-2">
         <button id="newListBtn" class="px-3 py-1.5 rounded-md bg-brand text-white hover:bg-brand-600 transition">Новый список</button>
         <button id="trashBtn" class="px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition" aria-label="Корзина" title="Корзина">
@@ -81,7 +81,7 @@
         </div>
       </div>
     </section>
-    <aside class="md:col-span-12 lg:col-span-12 order-2">
+    <aside id="listsAside" class="md:col-span-12 lg:col-span-12 order-2">
       <div class="p-4 rounded-xl border border-slate-200/70 dark:border-slate-800/70 glass">
         <h2 class="text-lg font-semibold mb-3">Выбери вишлист</h2>
         <ul id="lists" class="space-y-2 max-h-[60vh] overflow-auto pr-1"></ul>

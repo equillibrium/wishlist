@@ -74,6 +74,7 @@ const ui = {
       newListBtn: document.getElementById('newListBtn'),
       topControls: document.getElementById('topControls'),
       lists: document.getElementById('lists'),
+      listsAside: document.getElementById('listsAside'),
       currentListHeading: document.getElementById('currentListHeading'),
       helpText: document.getElementById('helpText'),
       listTitle: document.getElementById('listTitle'),
@@ -174,7 +175,7 @@ const ui = {
         items.forEach(t => {
           const row = document.createElement('div');
           row.className = 'flex items-center justify-between gap-2 p-2 rounded-md border border-slate-300/80 dark:border-slate-600';
-          row.innerHTML = `<div class="min-w-0"><div class="font-medium truncate">${escapeHtml(t.title || t.file)}</div><div class="text-xs text-slate-500">${new Date(t.deletedAt).toLocaleString()}</div></div>`;
+          row.innerHTML = `<div class="min-w-0"><div class="font-medium truncate">${escapeHtml(t.title || t.file)}</div><div class="text-xs text-slate-400 dark:text-slate-300">${new Date(t.deletedAt).toLocaleString()}</div></div>`;
           const actions = document.createElement('div');
           actions.className = 'flex gap-2';
           const restoreBtn = document.createElement('button');
@@ -278,59 +279,65 @@ const ui = {
   },
   renderLists() {
     this.els.lists.innerHTML = '';
-    (this.state.lists || []).forEach(l => {
-      const row = document.createElement('div');
-      row.className = `w-full flex items-stretch gap-2`;
-
-      const shareBtn = document.createElement('button');
-      shareBtn.className = 'px-2 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition shrink-0';
-      shareBtn.setAttribute('aria-label', 'Поделиться');
-      shareBtn.title = 'Поделиться ссылкой';
-      shareBtn.textContent = '🔗';
-      shareBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const url = new URL(`/${l.id}`, location.origin).toString();
-        try {
-          await navigator.clipboard.writeText(url);
-          shareBtn.textContent = '✅';
-          setTimeout(() => shareBtn.textContent = '🔗', 1200);
-        } catch {
-          const tmp = document.createElement('input');
-          tmp.value = url; document.body.appendChild(tmp); tmp.select(); document.execCommand('copy'); document.body.removeChild(tmp);
-          shareBtn.textContent = '✅';
-          setTimeout(() => shareBtn.textContent = '🔗', 1200);
+        (this.state.lists || []).forEach(l => {
+          const row = document.createElement('div');
+          row.className = `w-full flex items-stretch gap-2`;
+    
+          const shareBtn = document.createElement('button');
+          shareBtn.className = 'px-2 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition shrink-0';
+          shareBtn.setAttribute('aria-label', 'Поделиться');
+          shareBtn.title = 'Поделиться ссылкой';
+          shareBtn.textContent = '🔗';
+          shareBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const url = new URL(`/${l.id}`, location.origin).toString();
+            try {
+              await navigator.clipboard.writeText(url);
+              shareBtn.textContent = '✅';
+              setTimeout(() => shareBtn.textContent = '🔗', 1200);
+            } catch {
+              const tmp = document.createElement('input');
+              tmp.value = url; document.body.appendChild(tmp); tmp.select(); document.execCommand('copy'); document.body.removeChild(tmp);
+              shareBtn.textContent = '✅';
+              setTimeout(() => shareBtn.textContent = '🔗', 1200);
+            }
+          });
+    
+          const openBtn = document.createElement('button');
+          openBtn.className = `flex-1 text-left px-3 py-2 rounded-lg transition ${this.state.currentId===l.id?'bg-brand text-white hover:bg-brand-600':'border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`;
+          openBtn.innerHTML = `<div class=\"min-w-0\"><div class=\"font-medium truncate\">${escapeHtml(l.title || l.id)}</div><div class=\"text-xs text-slate-400 dark:text-slate-300\">${l.updatedAt?new Date(l.updatedAt).toLocaleString():'—'}</div></div>`;
+          openBtn.addEventListener('click', () => this.openWishlist(l.id));
+    
+          const delBtn = document.createElement('button');
+          delBtn.className = 'px-2 py-2 rounded-lg border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition shrink-0';
+          delBtn.setAttribute('aria-label', 'Удалить список');
+          delBtn.title = 'Удалить список';
+          delBtn.textContent = '🗑️';
+          delBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const ok = await this.confirmDialog('Удаление списка', `Переместить «${l.title || l.id}» в корзину?`);
+            if (!ok) return;
+            await api.deleteWishlist(l.id);
+            if (this.state.currentId === l.id) {
+              this.state.currentId = null;
+              this.state.currentData = null;
+              this.els.listTitle.value = '';
+              this.els.items.innerHTML = '';
+            }
+            await this.refreshLists();
+          });
+    
+          row.appendChild(shareBtn);
+          row.appendChild(openBtn);
+          row.appendChild(delBtn);
+          this.els.lists.appendChild(row);
+        });
+    
+        if (this.state.lists.length === 0) {
+          this.els.listsAside.classList.add('hidden');
+        } else {
+          this.els.listsAside.classList.remove('hidden');
         }
-      });
-
-      const openBtn = document.createElement('button');
-      openBtn.className = `flex-1 text-left px-3 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${this.state.currentId===l.id?'ring-2 ring-brand':''}`;
-      openBtn.innerHTML = `<div class=\"min-w-0\"><div class=\"font-medium truncate\">${escapeHtml(l.title || l.id)}</div><div class=\"text-xs text-slate-500\">${l.updatedAt?new Date(l.updatedAt).toLocaleString():'—'}</div></div>`;
-      openBtn.addEventListener('click', () => this.openWishlist(l.id));
-
-      const delBtn = document.createElement('button');
-      delBtn.className = 'px-2 py-2 rounded-lg border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition shrink-0';
-      delBtn.setAttribute('aria-label', 'Удалить список');
-      delBtn.title = 'Удалить список';
-      delBtn.textContent = '🗑️';
-      delBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const ok = await this.confirmDialog('Удаление списка', `Переместить «${l.title || l.id}» в корзину?`);
-        if (!ok) return;
-        await api.deleteWishlist(l.id);
-        if (this.state.currentId === l.id) {
-          this.state.currentId = null;
-          this.state.currentData = null;
-          this.els.listTitle.value = '';
-          this.els.items.innerHTML = '';
-        }
-        await this.refreshLists();
-      });
-
-      row.appendChild(shareBtn);
-      row.appendChild(openBtn);
-      row.appendChild(delBtn);
-      this.els.lists.appendChild(row);
-    });
   },
   async openWishlist(id) {
     this.state.currentId = id;
