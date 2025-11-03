@@ -30,15 +30,16 @@
   <meta name="description" content="Современный и красивый wishlist с совместным редактированием" />
   <meta name="mobile-web-app-capable" content="yes" />
 </head>
-<body class="min-h-screen bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
+<body class="min-h-screen overflow-x-hidden bg-gradient-to-b from-sky-50 to-white dark:from-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-100">
   <header class="sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-800/70 bg-white/70 dark:bg-slate-900/60 glass">
     <div class="mx-auto container-max px-4 py-3 flex items-center gap-3">
       <div class="text-2xl">🎁</div>
       <h1 class="text-xl font-semibold tracking-tight">Wishlist</h1>
-      <div class="ml-auto flex gap-2">
-        <button id="trashBtn" class="px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Корзина</button>
+      <div class="ml-auto flex flex-wrap gap-2">
         <button id="newListBtn" class="px-3 py-1.5 rounded-md bg-brand text-white hover:bg-brand-600 transition">Новый список</button>
-        <button id="refreshBtn" class="px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Обновить</button>
+        <button id="trashBtn" class="px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition" aria-label="Корзина" title="Корзина">
+          <span class="inline-block align-middle" aria-hidden="true">🗑️</span>
+        </button>
       </div>
     </div>
   </header>
@@ -55,24 +56,25 @@
           <div class="flex items-center gap-2">
             <select id="versionsSelect" class="px-3 py-1.5 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600"></select>
             <button id="restoreBtn" class="px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Восстановить</button>
-            <button id="deleteListBtn" class="px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition">Удалить список</button>
           </div>
         </div>
         <div class="mt-4">
-          <div class="flex flex-col sm:flex-row gap-2 mb-3">
-            <input id="newItemInput" type="text" placeholder="Добавить желание..." class="w-full px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand" />
-            <input id="newItemLink" type="url" placeholder="Ссылка (опционально)" class="w-full sm:w-72 px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand" />
-            <button id="addItemBtn" class="px-3 py-2 rounded-md bg-brand text-white hover:bg-brand-600 transition border border-transparent">Добавить</button>
-          </div>
           <ul id="items" class="space-y-2"></ul>
+          <div class="mt-4">
+            <button id="toggleAddFormBtn" class="px-3 py-2 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition">Добавить желание</button>
+            <div id="addForm" class="mt-3 hidden">
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input id="newItemInput" type="text" placeholder="Добавить желание..." class="w-full px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand" />
+                <input id="newItemLink" type="url" placeholder="Ссылка (опционально)" class="w-full sm:w-72 px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand" />
+                <button id="addItemBtn" class="px-3 py-2 rounded-md bg-brand text-white hover:bg-brand-600 transition border border-transparent">Добавить</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
     <aside class="md:col-span-4 lg:col-span-3 order-2">
       <div class="p-4 rounded-xl border border-slate-200/70 dark:border-slate-800/70 glass">
-        <div class="flex items-center gap-2 mb-3">
-          <input id="searchInput" type="text" placeholder="Поиск..." class="w-full px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand" />
-        </div>
         <ul id="lists" class="space-y-2 max-h-[60vh] overflow-auto pr-1"></ul>
       </div>
     </aside>

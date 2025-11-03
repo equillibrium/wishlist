@@ -72,15 +72,14 @@ const ui = {
   init() {
     this.els = {
       newListBtn: document.getElementById('newListBtn'),
-      refreshBtn: document.getElementById('refreshBtn'),
-      searchInput: document.getElementById('searchInput'),
       lists: document.getElementById('lists'),
       listTitle: document.getElementById('listTitle'),
       saveTitleBtn: document.getElementById('saveTitleBtn'),
       versionsSelect: document.getElementById('versionsSelect'),
       restoreBtn: document.getElementById('restoreBtn'),
-      deleteListBtn: document.getElementById('deleteListBtn'),
       trashBtn: document.getElementById('trashBtn'),
+      toggleAddFormBtn: document.getElementById('toggleAddFormBtn'),
+      addForm: document.getElementById('addForm'),
       newItemInput: document.getElementById('newItemInput'),
       newItemLink: document.getElementById('newItemLink'),
       addItemBtn: document.getElementById('addItemBtn'),
@@ -104,8 +103,7 @@ const ui = {
       await this.refreshLists();
       this.openWishlist(wl.id);
     });
-    this.els.refreshBtn.addEventListener('click', () => this.refresh());
-    this.els.searchInput.addEventListener('input', () => this.renderLists());
+    // автообновление включено; ручная кнопка обновления удалена
     this.els.saveTitleBtn.addEventListener('click', async () => {
       const title = this.els.listTitle.value.trim();
       if (!title) return;
@@ -119,6 +117,17 @@ const ui = {
         await this.refresh();
       }
     });
+    // Показ/скрытие формы добавления
+    this.els.toggleAddFormBtn.addEventListener('click', () => {
+      const isHidden = this.els.addForm.classList.contains('hidden');
+      if (isHidden) {
+        this.els.addForm.classList.remove('hidden');
+        setTimeout(() => this.els.newItemInput.focus(), 0);
+      } else {
+        this.els.addForm.classList.add('hidden');
+      }
+    });
+
     this.els.addItemBtn.addEventListener('click', async () => {
       if (!this.state.currentId) return;
       const text = this.els.newItemInput.value.trim();
@@ -128,6 +137,7 @@ const ui = {
       else await api.addItem(this.state.currentId, text);
       this.els.newItemInput.value = '';
       this.els.newItemLink.value = '';
+      this.els.addForm.classList.add('hidden');
       await this.refresh();
     });
     this.els.restoreBtn.addEventListener('click', async () => {
@@ -140,17 +150,7 @@ const ui = {
       await this.refresh();
     });
 
-    this.els.deleteListBtn.addEventListener('click', async () => {
-      if (!this.state.currentId) return;
-      const ok = await this.confirmDialog('Удаление списка', 'Переместить текущий список в корзину?');
-      if (!ok) return;
-      await api.deleteWishlist(this.state.currentId);
-      this.state.currentId = null;
-      this.state.currentData = null;
-      this.els.listTitle.value = '';
-      this.els.items.innerHTML = '';
-      await this.refreshLists();
-    });
+    // Кнопка удаления рядом со списками (в левом блоке)
 
     this.els.trashBtn.addEventListener('click', async () => {
       const items = await api.listTrash();
@@ -196,15 +196,38 @@ const ui = {
     this.renderLists();
   },
   renderLists() {
-    const q = this.els.searchInput.value?.toLowerCase() || '';
-    const filtered = this.state.lists.filter(l => (l.title || l.id).toLowerCase().includes(q));
     this.els.lists.innerHTML = '';
-    filtered.forEach(l => {
-      const btn = document.createElement('button');
-      btn.className = `w-full text-left px-3 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${this.state.currentId===l.id?'ring-2 ring-brand':''}`;
-      btn.innerHTML = `<div class="font-medium">${escapeHtml(l.title || l.id)}</div><div class="text-xs text-slate-500">${l.updatedAt?new Date(l.updatedAt).toLocaleString():'—'}</div>`;
-      btn.addEventListener('click', () => this.openWishlist(l.id));
-      this.els.lists.appendChild(btn);
+    (this.state.lists || []).forEach(l => {
+      const row = document.createElement('div');
+      row.className = `w-full flex items-stretch gap-2`;
+
+      const openBtn = document.createElement('button');
+      openBtn.className = `flex-1 text-left px-3 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${this.state.currentId===l.id?'ring-2 ring-brand':''}`;
+      openBtn.innerHTML = `<div class=\"min-w-0\"><div class=\"font-medium truncate\">${escapeHtml(l.title || l.id)}</div><div class=\"text-xs text-slate-500\">${l.updatedAt?new Date(l.updatedAt).toLocaleString():'—'}</div></div>`;
+      openBtn.addEventListener('click', () => this.openWishlist(l.id));
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'px-2 py-2 rounded-lg border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition shrink-0';
+      delBtn.setAttribute('aria-label', 'Удалить список');
+      delBtn.title = 'Удалить список';
+      delBtn.textContent = '🗑️';
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const ok = await this.confirmDialog('Удаление списка', `Переместить «${l.title || l.id}» в корзину?`);
+        if (!ok) return;
+        await api.deleteWishlist(l.id);
+        if (this.state.currentId === l.id) {
+          this.state.currentId = null;
+          this.state.currentData = null;
+          this.els.listTitle.value = '';
+          this.els.items.innerHTML = '';
+        }
+        await this.refreshLists();
+      });
+
+      row.appendChild(openBtn);
+      row.appendChild(delBtn);
+      this.els.lists.appendChild(row);
     });
   },
   async openWishlist(id) {
@@ -246,20 +269,45 @@ const ui = {
     const items = this.state.currentData.items || [];
     items.forEach(item => {
       const li = document.createElement('li');
-      li.className = 'p-3 rounded-lg border border-slate-300/80 dark:border-slate-600 flex gap-2 items-center';
+      li.className = 'p-3 rounded-lg border border-slate-300/80 dark:border-slate-600 flex flex-wrap gap-2 gap-y-2 items-center';
+
+      // Верхняя строка: название, статус, кнопка взять/освободить
+      const topRow = document.createElement('div');
+      topRow.className = 'w-full flex items-center gap-2';
 
       const input = document.createElement('input');
       input.type = 'text';
       input.value = item.text || '';
-      input.className = 'flex-1 bg-transparent border-b border-transparent focus:border-brand focus:outline-none';
+      input.className = 'flex-1 min-w-0 bg-transparent border-b border-transparent focus:border-brand focus:outline-none break-words';
       input.addEventListener('change', async () => {
         await api.updateItem(this.state.currentId, item.id, { text: input.value });
         await this.refresh();
       });
 
-      // Кнопка ссылки (открыть если есть, либо добавить)
+      const badge = document.createElement('span');
+      const taken = item.status === 'taken';
+      badge.className = `text-xs px-2 py-1 rounded-full shrink-0 ${taken?'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200':'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'}`;
+      badge.textContent = taken ? (item.takenBy ? `Занят: ${item.takenBy}` : 'Занят') : 'Свободен';
+
+      const actionBtn = document.createElement('button');
+      actionBtn.className = `px-3 py-1.5 rounded-md border shrink-0 ${taken?'border-slate-300/80 bg-slate-100 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600':'border-transparent bg-brand text-white hover:bg-brand-600'} transition`;
+      actionBtn.textContent = taken ? 'Освободить' : 'Взять';
+      actionBtn.addEventListener('click', async () => {
+        if (taken) await api.updateItem(this.state.currentId, item.id, { action: 'release' });
+        else await api.updateItem(this.state.currentId, item.id, { action: 'take' });
+        await this.refresh();
+      });
+
+      topRow.appendChild(input);
+      topRow.appendChild(badge);
+      topRow.appendChild(actionBtn);
+
+      // Нижняя строка: кнопки ссылок
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'w-full flex items-center gap-2';
+
       const linkBtn = document.createElement('button');
-      linkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm';
+      linkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
       linkBtn.textContent = item.link ? 'Открыть ссылку' : 'Добавить ссылку';
       linkBtn.addEventListener('click', async () => {
         if (item.link) {
@@ -275,11 +323,10 @@ const ui = {
         }
       });
 
-      // Кнопка изменить ссылку (только если ссылка уже есть)
       let editLinkBtn = null;
       if (item.link) {
         editLinkBtn = document.createElement('button');
-        editLinkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm';
+        editLinkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover=bg-slate-800 transition text-sm shrink-0';
         editLinkBtn.textContent = 'Изменить ссылку';
         editLinkBtn.addEventListener('click', async () => {
           const v = await ui.promptDialog('Изменить ссылку', 'URL (оставьте пустым чтобы удалить)', item.link || '');
@@ -290,25 +337,11 @@ const ui = {
         });
       }
 
-      const badge = document.createElement('span');
-      const taken = item.status === 'taken';
-      badge.className = `text-xs px-2 py-1 rounded-full ${taken?'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200':'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'}`;
-      badge.textContent = taken ? (item.takenBy ? `Занят: ${item.takenBy}` : 'Занят') : 'Свободен';
+      bottomRow.appendChild(linkBtn);
+      if (editLinkBtn) bottomRow.appendChild(editLinkBtn);
 
-      const actionBtn = document.createElement('button');
-      actionBtn.className = `px-3 py-1.5 rounded-md border ${taken?'border-slate-300/80 bg-slate-100 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600':'border-transparent bg-brand text-white hover:bg-brand-600'} transition`;
-      actionBtn.textContent = taken ? 'Освободить' : 'Взять';
-      actionBtn.addEventListener('click', async () => {
-        if (taken) await api.updateItem(this.state.currentId, item.id, { action: 'release' });
-        else await api.updateItem(this.state.currentId, item.id, { action: 'take' });
-        await this.refresh();
-      });
-
-      li.appendChild(input);
-      li.appendChild(linkBtn);
-      if (editLinkBtn) li.appendChild(editLinkBtn);
-      li.appendChild(badge);
-      li.appendChild(actionBtn);
+      li.appendChild(topRow);
+      li.appendChild(bottomRow);
       ul.appendChild(li);
     });
   }
