@@ -14,7 +14,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: 'null'
+  # storageClassName: <укажите при необходимости, иначе будет использован default StorageClass>
 ---
 apiVersion: apps/v1
 kind: Deployment
