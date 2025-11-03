@@ -5,8 +5,10 @@
     {
       "id": "mhjg1jch-1diytg",
       "text": "asdasd",
-      "status": "free",
-      "link": "https://asd"
+      "status": "taken",
+      "link": "https://asd",
+      "takenBy": "",
+      "takenAt": "2025-11-03T19:22:21.499Z"
     },
     {
       "id": "mhjhkpdr-doaihj",
@@ -14,5 +16,5 @@
       "status": "free"
     }
   ],
-  "updatedAt": "2025-11-03T19:22:23.845Z"
+  "updatedAt": "2025-11-03T19:22:21.499Z"
 }

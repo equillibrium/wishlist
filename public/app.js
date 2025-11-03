@@ -407,14 +407,40 @@ const ui = {
       const topRow = document.createElement('div');
       topRow.className = 'w-full flex items-center gap-2';
 
-      const input = document.createElement('input');
-      input.type = 'text';
+      const input = document.createElement('textarea');
       input.value = item.text || '';
-      input.className = 'flex-1 min-w-0 px-2 py-1 rounded-md bg-white/70 dark:bg-slate-800/60 border border-transparent focus:border-brand focus:outline-none break-words font-medium';
-      input.addEventListener('change', async () => {
+      input.className = 'item-name-input flex-1 min-w-0 px-2 py-1 rounded-md bg-white/70 dark:bg-slate-800/60 border border-transparent focus:border-brand focus:outline-none font-medium resize-none'; // Removed overflow-hidden
+      input.rows = 1;
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = (input.scrollHeight) + 'px';
+      });
+      input.addEventListener('change', async (e) => {
+        e.stopPropagation(); // Prevent li click from firing
         await api.updateItem(this.state.currentId, item.id, { text: input.value });
         await this.refresh();
       });
+      // Set initial height after content is set
+      setTimeout(() => {
+        input.style.height = 'auto';
+        input.style.height = (input.scrollHeight) + 'px';
+      }, 0);
+
+      const deleteItemBtn = document.createElement('button');
+      deleteItemBtn.className = 'px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition text-sm shrink-0';
+      deleteItemBtn.textContent = '🗑️';
+      deleteItemBtn.title = 'Удалить желание';
+      deleteItemBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent li click from firing
+        const ok = await ui.confirmDialog('Удалить желание', 'Вы уверены, что хотите удалить это желание?');
+        if (!ok) return;
+        console.log('Attempting to delete item:', this.state.currentId, item.id);
+        await api.deleteItem(this.state.currentId, item.id);
+        await this.refresh();
+      });
+
+      topRow.appendChild(input);
+      topRow.appendChild(deleteItemBtn);
 
       const badge = document.createElement('span');
       const taken = item.status === 'taken';
@@ -424,7 +450,8 @@ const ui = {
       const actionBtn = document.createElement('button');
       actionBtn.className = `px-3 py-1.5 rounded-md border shrink-0 ${taken?'border-slate-300/80 bg-slate-100 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600':'border-transparent bg-brand text-white hover:bg-brand-600'} transition`;
       actionBtn.textContent = taken ? 'Освободить' : 'Взять';
-      actionBtn.addEventListener('click', async () => {
+      actionBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent li click from firing
         if (taken) {
           const ok = await ui.confirmDialog('Освободить пункт', 'Вы уверены? Это может освободить пункт, который забрали не вы.');
           if (!ok) return;
@@ -434,9 +461,11 @@ const ui = {
         await this.refresh();
       });
 
-      topRow.appendChild(input);
-      topRow.appendChild(badge);
-      topRow.appendChild(actionBtn);
+      // Новая строка для статуса и кнопки
+      const bottomRowControls = document.createElement('div');
+      bottomRowControls.className = 'w-full flex items-center gap-2';
+      bottomRowControls.appendChild(badge);
+      bottomRowControls.appendChild(actionBtn);
 
       // Нижняя строка: кнопки ссылок
       const bottomRow = document.createElement('div');
@@ -446,8 +475,9 @@ const ui = {
       linkBtn.className = item.link
         ? 'px-3 py-1.5 rounded-md border border-transparent bg-brand text-white hover:bg-brand-600 transition text-sm shrink-0'
         : 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
-      linkBtn.textContent = item.link ? 'Открыть ссылку' : 'Добавить ссылку';
-      linkBtn.addEventListener('click', async () => {
+      linkBtn.innerHTML = item.link ? 'Открыть ссылку' : 'Добавить ссылку';
+      linkBtn.addEventListener('click', async (e) => {
+        e.stopPropagation(); // Prevent li click from firing
         if (item.link) {
           const url = api.normalizeLink(item.link);
           window.open(url, '_blank', 'noopener');
@@ -465,8 +495,9 @@ const ui = {
       if (item.link) {
         editLinkBtn = document.createElement('button');
         editLinkBtn.className = 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
-        editLinkBtn.textContent = 'Изменить ссылку';
-        editLinkBtn.addEventListener('click', async () => {
+        editLinkBtn.innerHTML = 'Изменить ссылку';
+        editLinkBtn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Prevent li click from firing
           const v = await ui.promptDialog('Изменить ссылку', 'URL (оставьте пустым чтобы удалить)', item.link || '');
           if (v === null) return;
           const link = (v || '').trim();
@@ -478,21 +509,9 @@ const ui = {
       bottomRow.appendChild(linkBtn);
       if (editLinkBtn) bottomRow.appendChild(editLinkBtn);
 
-      const deleteItemBtn = document.createElement('button');
-      deleteItemBtn.className = 'px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition text-sm shrink-0';
-      deleteItemBtn.textContent = '🗑️';
-      deleteItemBtn.title = 'Удалить желание';
-      deleteItemBtn.addEventListener('click', async () => {
-        const ok = await ui.confirmDialog('Удалить желание', 'Вы уверены, что хотите удалить это желание?');
-        if (!ok) return;
-        console.log('Attempting to delete item:', this.state.currentId, item.id);
-        await api.deleteItem(this.state.currentId, item.id);
-        await this.refresh();
-      });
-      bottomRow.appendChild(deleteItemBtn);
-
       li.appendChild(topRow);
       li.appendChild(bottomRow);
+      li.appendChild(bottomRowControls);
       ul.appendChild(li);
     });
   }
