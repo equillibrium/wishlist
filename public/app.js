@@ -72,7 +72,10 @@ const ui = {
   init() {
     this.els = {
       newListBtn: document.getElementById('newListBtn'),
+      topControls: document.getElementById('topControls'),
       lists: document.getElementById('lists'),
+      currentListHeading: document.getElementById('currentListHeading'),
+      helpText: document.getElementById('helpText'),
       listTitle: document.getElementById('listTitle'),
       saveTitleBtn: document.getElementById('saveTitleBtn'),
       versionsSelect: document.getElementById('versionsSelect'),
@@ -80,6 +83,7 @@ const ui = {
       trashBtn: document.getElementById('trashBtn'),
       toggleAddFormBtn: document.getElementById('toggleAddFormBtn'),
       addForm: document.getElementById('addForm'),
+      editListBtn: document.getElementById('editListBtn'),
       newItemInput: document.getElementById('newItemInput'),
       newItemLink: document.getElementById('newItemLink'),
       addItemBtn: document.getElementById('addItemBtn'),
@@ -93,6 +97,13 @@ const ui = {
     };
     this.bind();
     this.refreshLists();
+    // Открыть список из URL, если указан /:id
+    const pathId = (location.pathname || '/').slice(1);
+    if (pathId) this.openWishlist(pathId);
+    window.addEventListener('popstate', () => {
+      const pid = (location.pathname || '/').slice(1);
+      if (pid) this.openWishlist(pid); else this.clearCurrent();
+    });
     setInterval(() => this.autoRefresh(), 5000);
   },
   bind() {
@@ -190,6 +201,76 @@ const ui = {
       }
       this.openModal('Корзина', body);
     });
+    // Модалка редактирования списка
+    this.els.editListBtn.addEventListener('click', () => {
+      if (!this.state.currentId || !this.state.currentData) return;
+      const container = document.createElement('div');
+      container.className = 'space-y-3';
+      const titleLabel = document.createElement('label');
+      titleLabel.className = 'text-sm text-slate-600 dark:text-slate-300';
+      titleLabel.textContent = 'Название списка';
+      const titleInput = document.createElement('input');
+      titleInput.type = 'text';
+      titleInput.value = this.state.currentData.title || '';
+      titleInput.className = 'w-full mt-1 px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-brand';
+
+      const versionsWrap = document.createElement('div');
+      const versionsLabel = document.createElement('label');
+      versionsLabel.className = 'text-sm text-slate-600 dark:text-slate-300';
+      versionsLabel.textContent = 'Копии (версии)';
+      const versionsSelect = document.createElement('select');
+      versionsSelect.className = 'w-full mt-1 px-3 py-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-slate-300/80 dark:border-slate-600';
+
+      container.appendChild(titleLabel);
+      container.appendChild(titleInput);
+      versionsWrap.appendChild(versionsLabel);
+      versionsWrap.appendChild(versionsSelect);
+      container.appendChild(versionsWrap);
+
+      api.listVersions(this.state.currentId).then((versions) => {
+        versionsSelect.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = versions.length ? 'Выберите версию' : 'Нет копий';
+        versionsSelect.appendChild(ph);
+        versions.forEach(v => {
+          const opt = document.createElement('option');
+          opt.value = v.file;
+          opt.textContent = new Date(v.mtime).toLocaleString();
+          versionsSelect.appendChild(opt);
+        });
+      });
+
+      const actions = document.createElement('div');
+      actions.className = 'flex justify-end gap-2 pt-1';
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'px-3 py-1.5 rounded-md bg-brand text-white hover:bg-brand-600 border border-transparent';
+      saveBtn.textContent = 'Сохранить';
+      saveBtn.onclick = async () => {
+        const t = titleInput.value.trim();
+        if (t) {
+          await api.saveTitle(this.state.currentId, t);
+          await this.refresh();
+        }
+        ui.closeModal();
+      };
+      const restoreBtn = document.createElement('button');
+      restoreBtn.className = 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800';
+      restoreBtn.textContent = 'Восстановить выбранную копию';
+      restoreBtn.onclick = async () => {
+        const file = versionsSelect.value;
+        if (!file) return;
+        const ok = await ui.confirmDialog('Восстановление', 'Восстановить выбранную версию? Текущая будет сохранена как копия.');
+        if (!ok) return;
+        await api.restoreVersion(this.state.currentId, file);
+        await this.refresh();
+        ui.closeModal();
+      };
+      actions.appendChild(restoreBtn);
+      actions.appendChild(saveBtn);
+      container.appendChild(actions);
+      ui.openModal('Редактировать список', container);
+    });
   },
   async refreshLists() {
     this.state.lists = await api.listWishlists();
@@ -200,6 +281,26 @@ const ui = {
     (this.state.lists || []).forEach(l => {
       const row = document.createElement('div');
       row.className = `w-full flex items-stretch gap-2`;
+
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'px-2 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition shrink-0';
+      shareBtn.setAttribute('aria-label', 'Поделиться');
+      shareBtn.title = 'Поделиться ссылкой';
+      shareBtn.textContent = '🔗';
+      shareBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const url = new URL(`/${l.id}`, location.origin).toString();
+        try {
+          await navigator.clipboard.writeText(url);
+          shareBtn.textContent = '✅';
+          setTimeout(() => shareBtn.textContent = '🔗', 1200);
+        } catch {
+          const tmp = document.createElement('input');
+          tmp.value = url; document.body.appendChild(tmp); tmp.select(); document.execCommand('copy'); document.body.removeChild(tmp);
+          shareBtn.textContent = '✅';
+          setTimeout(() => shareBtn.textContent = '🔗', 1200);
+        }
+      });
 
       const openBtn = document.createElement('button');
       openBtn.className = `flex-1 text-left px-3 py-2 rounded-lg border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition ${this.state.currentId===l.id?'ring-2 ring-brand':''}`;
@@ -225,6 +326,7 @@ const ui = {
         await this.refreshLists();
       });
 
+      row.appendChild(shareBtn);
       row.appendChild(openBtn);
       row.appendChild(delBtn);
       this.els.lists.appendChild(row);
@@ -232,6 +334,7 @@ const ui = {
   },
   async openWishlist(id) {
     this.state.currentId = id;
+    history.pushState(null, '', `/${id}`);
     await this.refresh();
   },
   async refresh() {
@@ -241,9 +344,27 @@ const ui = {
     this.state.currentData = data;
     this.state.lastRefresh = Date.now();
     this.els.listTitle.value = data.title || '';
+    if (this.els.currentListHeading) {
+      this.els.currentListHeading.textContent = data.title || '';
+      this.els.currentListHeading.classList.remove('hidden');
+    }
+    this.els.helpText?.classList.remove('hidden');
     await this.loadVersions();
     this.renderItems();
     await this.refreshLists();
+    this.els.topControls?.classList.add('hidden');
+  },
+  clearCurrent() {
+    this.state.currentId = null;
+    this.state.currentData = null;
+    this.els.listTitle.value = '';
+    this.els.items.innerHTML = '';
+    this.els.topControls?.classList.remove('hidden');
+    if (this.els.currentListHeading) {
+      this.els.currentListHeading.textContent = '';
+      this.els.currentListHeading.classList.add('hidden');
+    }
+    this.els.helpText?.classList.add('hidden');
   },
   async autoRefresh() {
     if (!this.state.currentId) return;
@@ -278,7 +399,7 @@ const ui = {
       const input = document.createElement('input');
       input.type = 'text';
       input.value = item.text || '';
-      input.className = 'flex-1 min-w-0 bg-transparent border-b border-transparent focus:border-brand focus:outline-none break-words';
+      input.className = 'flex-1 min-w-0 px-2 py-1 rounded-md bg-white/70 dark:bg-slate-800/60 border border-transparent focus:border-brand focus:outline-none break-words font-medium';
       input.addEventListener('change', async () => {
         await api.updateItem(this.state.currentId, item.id, { text: input.value });
         await this.refresh();
@@ -286,14 +407,18 @@ const ui = {
 
       const badge = document.createElement('span');
       const taken = item.status === 'taken';
-      badge.className = `text-xs px-2 py-1 rounded-full shrink-0 ${taken?'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200':'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'}`;
+      badge.className = `text-sm px-3 py-1.5 rounded-full shrink-0 ${taken?'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200':'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'}`;
       badge.textContent = taken ? (item.takenBy ? `Занят: ${item.takenBy}` : 'Занят') : 'Свободен';
 
       const actionBtn = document.createElement('button');
       actionBtn.className = `px-3 py-1.5 rounded-md border shrink-0 ${taken?'border-slate-300/80 bg-slate-100 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600':'border-transparent bg-brand text-white hover:bg-brand-600'} transition`;
       actionBtn.textContent = taken ? 'Освободить' : 'Взять';
       actionBtn.addEventListener('click', async () => {
-        if (taken) await api.updateItem(this.state.currentId, item.id, { action: 'release' });
+        if (taken) {
+          const ok = await ui.confirmDialog('Освободить пункт', 'Вы уверены? Это может освободить пункт, который забрали не вы.');
+          if (!ok) return;
+          await api.updateItem(this.state.currentId, item.id, { action: 'release' });
+        }
         else await api.updateItem(this.state.currentId, item.id, { action: 'take' });
         await this.refresh();
       });
@@ -307,7 +432,9 @@ const ui = {
       bottomRow.className = 'w-full flex items-center gap-2';
 
       const linkBtn = document.createElement('button');
-      linkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
+      linkBtn.className = item.link
+        ? 'px-3 py-1.5 rounded-md border border-transparent bg-brand text-white hover:bg-brand-600 transition text-sm shrink-0'
+        : 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
       linkBtn.textContent = item.link ? 'Открыть ссылку' : 'Добавить ссылку';
       linkBtn.addEventListener('click', async () => {
         if (item.link) {
@@ -326,7 +453,7 @@ const ui = {
       let editLinkBtn = null;
       if (item.link) {
         editLinkBtn = document.createElement('button');
-        editLinkBtn.className = 'px-2 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover=bg-slate-800 transition text-sm shrink-0';
+        editLinkBtn.className = 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
         editLinkBtn.textContent = 'Изменить ссылку';
         editLinkBtn.addEventListener('click', async () => {
           const v = await ui.promptDialog('Изменить ссылку', 'URL (оставьте пустым чтобы удалить)', item.link || '');

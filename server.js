@@ -334,6 +334,11 @@ app.delete('/api/trash/:file', async (req, res) => {
   }
 });
 
+// SPA fallback: serve index.html for non-API routes
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Wishlist app running on http://localhost:${PORT}`);
 });
