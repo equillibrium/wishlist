@@ -56,6 +56,10 @@ const api = {
     const res = await fetch(`/api/wishlists/${id}/items/${itemId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return res.json();
   },
+  async deleteItem(id, itemId) {
+    const res = await fetch(`/api/wishlists/${id}/items/${itemId}`, { method: 'DELETE' });
+    return res.json();
+  },
   async listVersions(id) {
     const res = await fetch(`/api/wishlists/${id}/versions`);
     return res.json();
@@ -473,6 +477,19 @@ const ui = {
 
       bottomRow.appendChild(linkBtn);
       if (editLinkBtn) bottomRow.appendChild(editLinkBtn);
+
+      const deleteItemBtn = document.createElement('button');
+      deleteItemBtn.className = 'px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition text-sm shrink-0';
+      deleteItemBtn.textContent = '🗑️';
+      deleteItemBtn.title = 'Удалить желание';
+      deleteItemBtn.addEventListener('click', async () => {
+        const ok = await ui.confirmDialog('Удалить желание', 'Вы уверены, что хотите удалить это желание?');
+        if (!ok) return;
+        console.log('Attempting to delete item:', this.state.currentId, item.id);
+        await api.deleteItem(this.state.currentId, item.id);
+        await this.refresh();
+      });
+      bottomRow.appendChild(deleteItemBtn);
 
       li.appendChild(topRow);
       li.appendChild(bottomRow);

@@ -199,6 +199,39 @@ app.patch('/api/wishlists/:id/items/:itemId', async (req, res) => {
   }
 });
 
+// Delete item
+app.delete('/api/wishlists/:id/items/:itemId', async (req, res) => {
+  try {
+    const { id, itemId } = req.params;
+    console.log('DELETE /api/wishlists/' + id + '/items/' + itemId + ': Received request to delete item.');
+    const p = wishlistPath(id);
+    if (!fs.existsSync(p)) return res.status(404).json({ error: 'Not found' });
+    const raw = await readFileAsync(p);
+    const data = JSON.parse(raw);
+    const initialLength = data.items.length;
+    console.log('Before filtering, items length:', initialLength);
+    console.log('Items before filtering:', data.items);
+
+    data.items = data.items.filter(item => item.id !== itemId);
+
+    console.log('After filtering, items length:', data.items.length);
+    console.log('Items after filtering:', data.items);
+
+    if (data.items.length === initialLength) {
+      console.log('Item not found or no change in length.');
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    await saveVersionIfExists(id);
+
+    data.updatedAt = new Date().toISOString();
+    await writeFileAsync(p, JSON.stringify(data, null, 2));
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to delete item' });
+  }
+});
+
 // Rename wishlist
 app.patch('/api/wishlists/:id', async (req, res) => {
   try {
