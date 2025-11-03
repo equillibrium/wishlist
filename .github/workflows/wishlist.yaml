@@ -89,4 +89,4 @@ jobs:
             export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
             which kubectl
             kubectl apply -f /tmp/k8s/wishlist.yaml
-            kubectl rollout status deployment/todo-frontend --namespace todo --timeout=120s
+            kubectl rollout status deployment/wishlist --namespace wishlist --timeout=120s
