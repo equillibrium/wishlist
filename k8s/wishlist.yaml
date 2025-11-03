@@ -89,17 +89,17 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: todo-frontend
-  namespace: todo
+  name: wishlist
+  namespace: wishlist
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`todo.kotobars.ru`)
+    - match: Host(`wishlist.kotobars.ru`)
       kind: Rule
       services:
-        - name: todo-frontend
-          namespace: todo
+        - name: wishlist
+          namespace: wishlist
           port: 80
           scheme: http
           passHostHeader: true
