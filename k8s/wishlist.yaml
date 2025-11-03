@@ -14,7 +14,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: null
+  storageClassName: 'null'
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -34,7 +34,7 @@ spec:
       containers:
         - name: wishlist
           # Замените на ваш образ, например ghcr.io/<owner>/wishlist:latest
-          image: ghcr.io/OWNER/wishlist:latest
+          image: ghcr.io/equillibrium/wishlist:latest
           imagePullPolicy: IfNotPresent
           env:
             - name: NODE_ENV
@@ -85,4 +85,27 @@ spec:
       name: http
   type: ClusterIP
 
-
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: todo-frontend
+  namespace: todo
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`todo.kotobars.ru`)
+      kind: Rule
+      services:
+        - name: todo-frontend
+          namespace: todo
+          port: 80
+          scheme: http
+          passHostHeader: true
+  tls:
+    certResolver: letsencrypt
+    domains:
+      - main: "*.kotobars.ru"
+        sans:
+          - "kotobars.ru"
