@@ -1,0 +1,20 @@
+{
+  "id": "mhj75xrc-dfkdmg",
+  "title": "test",
+  "items": [
+    {
+      "id": "mhj76fdh-yy24du",
+      "text": "Rose toy",
+      "status": "free"
+    },
+    {
+      "id": "mhj7h7z0-v660zj",
+      "text": "Zalupa",
+      "status": "taken",
+      "link": "http://tass.ru",
+      "takenBy": "",
+      "takenAt": "2025-11-03T13:58:54.290Z"
+    }
+  ],
+  "updatedAt": "2025-11-03T13:58:54.290Z"
+}
