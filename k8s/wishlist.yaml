@@ -35,7 +35,7 @@ spec:
         - name: wishlist
           # Замените на ваш образ, например ghcr.io/<owner>/wishlist:latest
           image: ghcr.io/equillibrium/wishlist:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           env:
             - name: NODE_ENV
               value: "production"
