@@ -410,11 +410,26 @@ const ui = {
       const input = document.createElement('input');
       input.type = 'text';
       input.value = item.text || '';
-      input.className = 'flex-1 min-w-0 px-2 py-1 rounded-md bg-white/70 dark:bg-slate-800/60 border border-transparent focus:border-brand focus:outline-none break-words font-medium';
+      input.className = 'flex-1 min-w-0 px-2 py-1 rounded-md bg-white/70 dark:bg-slate-800/60 border border-transparent focus:border-brand focus:outline-none font-medium whitespace-nowrap overflow-hidden text-ellipsis';
       input.addEventListener('change', async () => {
         await api.updateItem(this.state.currentId, item.id, { text: input.value });
         await this.refresh();
       });
+
+      const deleteItemBtn = document.createElement('button');
+      deleteItemBtn.className = 'px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition text-sm shrink-0';
+      deleteItemBtn.textContent = '🗑️';
+      deleteItemBtn.title = 'Удалить желание';
+      deleteItemBtn.addEventListener('click', async () => {
+        const ok = await ui.confirmDialog('Удалить желание', 'Вы уверены, что хотите удалить это желание?');
+        if (!ok) return;
+        console.log('Attempting to delete item:', this.state.currentId, item.id);
+        await api.deleteItem(this.state.currentId, item.id);
+        await this.refresh();
+      });
+
+      topRow.appendChild(input);
+      topRow.appendChild(deleteItemBtn);
 
       const badge = document.createElement('span');
       const taken = item.status === 'taken';
@@ -434,9 +449,11 @@ const ui = {
         await this.refresh();
       });
 
-      topRow.appendChild(input);
-      topRow.appendChild(badge);
-      topRow.appendChild(actionBtn);
+      // Новая строка для статуса и кнопки
+      const bottomRowControls = document.createElement('div');
+      bottomRowControls.className = 'w-full flex items-center gap-2';
+      bottomRowControls.appendChild(badge);
+      bottomRowControls.appendChild(actionBtn);
 
       // Нижняя строка: кнопки ссылок
       const bottomRow = document.createElement('div');
@@ -478,21 +495,9 @@ const ui = {
       bottomRow.appendChild(linkBtn);
       if (editLinkBtn) bottomRow.appendChild(editLinkBtn);
 
-      const deleteItemBtn = document.createElement('button');
-      deleteItemBtn.className = 'px-3 py-1.5 rounded-md border border-red-300/80 text-red-700 hover:bg-red-50 dark:border-red-700/60 dark:text-red-300 dark:hover:bg-red-900/30 transition text-sm shrink-0';
-      deleteItemBtn.textContent = '🗑️';
-      deleteItemBtn.title = 'Удалить желание';
-      deleteItemBtn.addEventListener('click', async () => {
-        const ok = await ui.confirmDialog('Удалить желание', 'Вы уверены, что хотите удалить это желание?');
-        if (!ok) return;
-        console.log('Attempting to delete item:', this.state.currentId, item.id);
-        await api.deleteItem(this.state.currentId, item.id);
-        await this.refresh();
-      });
-      bottomRow.appendChild(deleteItemBtn);
-
       li.appendChild(topRow);
       li.appendChild(bottomRow);
+      li.appendChild(bottomRowControls);
       ul.appendChild(li);
     });
   }
