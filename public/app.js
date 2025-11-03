@@ -475,7 +475,7 @@ const ui = {
       linkBtn.className = item.link
         ? 'px-3 py-1.5 rounded-md border border-transparent bg-brand text-white hover:bg-brand-600 transition text-sm shrink-0'
         : 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
-      linkBtn.innerHTML = item.link ? 'Открыть<br>ссылку' : 'Добавить<br>ссылку';
+      linkBtn.innerHTML = item.link ? 'Открыть ссылку' : 'Добавить ссылку';
       linkBtn.addEventListener('click', async (e) => {
         e.stopPropagation(); // Prevent li click from firing
         if (item.link) {
@@ -495,7 +495,7 @@ const ui = {
       if (item.link) {
         editLinkBtn = document.createElement('button');
         editLinkBtn.className = 'px-3 py-1.5 rounded-md border border-slate-300/80 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-sm shrink-0';
-        editLinkBtn.innerHTML = 'Изменить<br>ссылку';
+        editLinkBtn.innerHTML = 'Изменить ссылку';
         editLinkBtn.addEventListener('click', async (e) => {
           e.stopPropagation(); // Prevent li click from firing
           const v = await ui.promptDialog('Изменить ссылку', 'URL (оставьте пустым чтобы удалить)', item.link || '');
