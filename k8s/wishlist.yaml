@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wishlist
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wishlist-data
+  namespace: wishlist
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: null
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wishlist
+  namespace: wishlist
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wishlist
+  template:
+    metadata:
+      labels:
+        app: wishlist
+    spec:
+      containers:
+        - name: wishlist
+          # Замените на ваш образ, например ghcr.io/<owner>/wishlist:latest
+          image: ghcr.io/OWNER/wishlist:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: wishlist-data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: wishlist-data
+          persistentVolumeClaim:
+            claimName: wishlist-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wishlist
+  namespace: wishlist
+spec:
+  selector:
+    app: wishlist
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  type: ClusterIP
+
+
