@@ -63,9 +63,9 @@ jobs:
       - name: Copy manifests to remote host
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.K8S_SSH_HOST }}
-          username: ${{ secrets.K8S_SSH_USER }}
-          key: ${{ secrets.K8S_SSH_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
           source: "k8s"
           target: "/tmp"
 
