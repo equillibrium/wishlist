@@ -4,6 +4,20 @@ metadata:
   name: wishlist
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: wishlist-data-folder
+  namespace: wishlist
+spec:
+  capacity:
+    storage: 5Gi # Match or exceed your PVC request
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual # This is the key
+  hostPath:
+    path: /Users/alexandermyltsev/k8s/wishlist/Data # Your chosen Mac folder
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: wishlist-data
@@ -13,8 +27,8 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
-  # storageClassName: <укажите при необходимости, иначе будет использован default StorageClass>
+      storage: 5Gi
+  storageClassName: manual
 ---
 apiVersion: apps/v1
 kind: Deployment
