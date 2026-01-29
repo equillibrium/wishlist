@@ -59,7 +59,7 @@ jobs:
   deploy:
     name: Deploy to Kubernetes
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: microk8s-pve-runner
     # if: github.ref == 'refs/heads/main'
     environment:
       name: production
@@ -67,27 +67,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy manifests to remote host
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "k8s"
-          target: "/tmp"
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Create Image Pull Secret
+        run: |
+          kubectl create namespace todo --dry-run=client -o yaml | kubectl apply -f -
+          
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.REGISTRY_PAT }} \
+            --namespace wishlist \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy manifests
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script_stop: true
-          script: |
-            set -eo pipefail
-            export PATH="/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:$PATH"
-            export KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
-            which kubectl
-            kubectl apply -f /tmp/k8s/wishlist.yaml
-            kubectl rollout restart deployment/wishlist --namespace wishlist
-            kubectl rollout status deployment/wishlist --namespace wishlist --timeout=120s
+        run: |
+          set -eo pipefail
+          kubectl create namespace todo --dry-run=client -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/deployment.yaml --namespace wishlist
+          kubectl apply -f k8s/service.yaml --namespace wishlist
+          kubectl apply -f k8s/httproute.yaml --namespace wishlist
+          kubectl set image deployment/todo-frontend todo-frontend=${{ needs.build.outputs.image_name }}:${{ github.sha }} --namespace wishlist
+          kubectl rollout status deployment/todo-frontend --namespace wishlist --timeout=120s
